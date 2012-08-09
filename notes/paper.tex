@@ -34,7 +34,7 @@
 
 % The \icmltitle you define below is probably too long as a header.
 % Therefore, a short form for the running title is supplied here:
-\icmltitlerunning{Nonparametric Noise models for the Gaussian Process}
+\icmltitlerunning{Nonparametric Noise Models for the Gaussian Process}
 
 \begin{document} 
 
@@ -87,7 +87,56 @@ be a Dirichlet process with concentration parameter $\alpha$ and base measure $H
 \section{Inference}
 \label{inference}
 
-We can perform inference in this model using a collapsed Gibbs sampler. In order to work with the CRP representation of the Dirichlet process we introduce a new variable $z_t$ which will represent CRP partition that datapoint $t$ belongs to.
+We can perform inference in this model using a collapsed Gibbs sampler. In order to work with the CRP representation of the Dirichlet process we introduce a new variable $z_t$ which will represent CRP partition that datapoint $t$ belongs to. For each CRP partition $n$ we represent the cluster parameters using $\theta_n$.
+
+\begin{algorithm}[tb]
+   \caption{Collapsed Gibbs Sampling}
+   \label{alg:cgibbs}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} data $\bm{x}, \bm{y}$ and kernel $\bm{K}(\bm{x},\bm{x})$
+   \STATE {\bfseries Initialisation:} $z_t \sim \textrm{CRP}(\alpha)$, $\theta_n \sim H$
+   \REPEAT
+   \STATE Sample $z_t | \bm{K}, \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}$
+   \STATE Sample $\theta_n | \bm{x}, \bm{y}, \bm{\theta}$
+   \UNTIL convergence
+\end{algorithmic}
+\end{algorithm}
+
+In algorithm~\ref{alg:cgibbs} we integrate out the Gaussian process $\bm{f}$. In what follows we derive the resampling steps for $z_t$ and $\theta_n$.
+
+\paragraph{Sampling $z_t$} The conditional distribution of $z_t$ can be written as follows
+\begin{eqnarray*}
+p(z_t | \bm{K}, \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}) & \propto & \int p(\bm{y} | \bm{f}, \bm{z}_{\lnot t}, z_t, \bm{\theta} ) p(\bm{f} | \bm{K}) d \bm{f}, \\
+ & = & \int p(y_t | f_t, \theta_{z_t} ) p(f_t | \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}, \bm{K}) df_t, \\
+ & = & \textrm{WHAT THEN?}
+\end{eqnarray*}
+
+Explain why we can make the jump above.
+
+The key bit is that $p(f_t | \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}, \bm{K})$ is a Gaussian process where every datapoint contributes noise that is dependent on the CRP partition it belongs to.
+
+\begin{equation}
+\begin{pmatrix}
+\bm{y} \\ f_t
+\end{pmatrix}
+\sim
+\begin{pmatrix}
+K(x_1,x_1) & K(x_1,x_2) & ... \\
+K(x_1,x_1) & K(x_1,x_2) & ... \\
+K(x_1,x_1) & K(x_1,x_2) & ... \\
+\end{pmatrix}
+\end{equation}
+
+
+We know that [CITE Carl] $p(\bm{f} | \bm{K})$ can be represented as a multivariate Gaussian distribution. 
+
+%  & = & \int p(y_t | f_t, \theta_{z_t} ) p(f_t | \bm{f}, \bm{y}, \bm{z}_{\lnot t}, z_t, \bm{\theta}) p(\bm{y}_{\lnot t} | \bm{f)_{\lnot t},  \bm{z}_{\lnot t}, \bm{\theta}) p(\bm{f} | \bm{K}) d \bm{f}, \\
+
+\paragraph{Sampling $\theta_n$}
+
+
+
+
 
 
 
