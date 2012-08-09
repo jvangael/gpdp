@@ -27,74 +27,74 @@ class GPDP(object):
         self.alpha = 0.5
 
         # Initial settings of the sampler.
-        self.K = 5
+        self.N = 5
 
 
     def _crp_sufficient_stats(self, z):
         """Computes the sufficient statistics for a CRP from a set of cluster assingments."""
-        n = np.array([0.0] * (self.K + 1))
+        ss = np.array([0.0] * (self.N + 1))
         for z_i in z:
-            n[z_i] += 1
-        n[self.K] = self.alpha
-        return n
+            ss[z_i] += 1
+        ss[self.N] = self.alpha
+        return ss
 
     def log_likelihood(self, z):
-        """Computes a vector of log likelihood values for every assignment of a datapoint to each of the self.K clusters."""
-        return np.array([0.0] * (self.K + 1))
+        """Computes a vector of log likelihood values for every assignment of a datapoint to each of the self.N clusters."""
+        return np.array([0.0] * (self.N + 1))
 
 
     def gibbs(self, iterations):
 
-        z = randint(self.K, size=self.T)
-        n = self._crp_sufficient_stats(z)
+        z = randint(self.N, size=self.T)
+        ss = self._crp_sufficient_stats(z)
 
         stats = {
-            'K': []
+            'N': []
         }
 
         for itr in xrange(iterations):
-            print "Iteration %d - K = %d." % (itr, self.K)
+            print "Iteration %d - N = %d." % (itr, self.N)
 
             for t in xrange(self.T):
                 # Compute crp sufficient stats without datapoint t.
-                n[z[t]] -= 1
+                ss[z[t]] -= 1
 
                 # Resample z_t.
-                log_v = np.log(n) + self.log_likelihood(z)
+                log_v = np.log(ss) + self.log_likelihood(z)
                 v = _normalize_log_probabilities(log_v)
                 z[t] = _categorical(v)
-                if z[t] < self.K:
-                    n[z[t]] += 1
+                if z[t] < self.N:
+                    ss[z[t]] += 1
                 else:
-                    n[self.K] = 1.0
-                    n = np.append(n, self.alpha)
-                    self.K += 1
+                    ss[self.N] = 1.0
+                    ss = np.append(ss, self.alpha)
+                    self.N += 1
 
-                assert(np.sum(n) == self.T + self.alpha)
+                assert(np.sum(ss) == self.T + self.alpha)
 
             # Compact clusters if need be.
-            for k in xrange(self.K - 1, -1, -1):
-                if n[k] < 1.0e-5:
-                    assert(np.sum(z == k) == 0)
-                    z[z > k] = z[z > k] - 1
-                    n = np.delete(n, k)
-                    self.K -= 1
+            for n in xrange(self.N - 1, -1, -1):
+                if ss[n] < 1.0e-5:
+                    assert(np.sum(z == n) == 0)
+                    z[z > n] = z[z > n] - 1
+                    ss = np.delete(ss, n)
+                    self.N -= 1
 
-            stats['K'].append(self.K)
+            stats['N'].append(self.N)
 
-        plt.plot(stats['K'])
+        plt.plot(stats['N'])
         plt.show()
 
 
-def generate(K=5, T=10, l=20.0, sigma_n=0.1, sigma_0=1.0):
+def generate(N=5, T=10, l=20.0, sigma_n=0.1, sigma_0=1.0):
     """Generates a GP with DP noise."""
     x = np.asarray(xrange(0, T))
-    mu = normal(0.0, sigma_0, K)
-    z = np.asarray([_categorical([1.0 / K] * K) for _ in xrange(0, T)])
+    mu = normal(0.0, sigma_0, N)
+    z = np.asarray([_categorical([1.0 / N] * N) for _ in xrange(0, T)])
 
-    M = kernel_se(x)
+    K = kernel_se(x)
 
-    y_base = multivariate_normal(mean=np.zeros(T), cov=M)
+    y_base = multivariate_normal(mean=np.zeros(T), cov=K)
     y = y_base + normal(mu[z], sigma_n)
 
     return x, y_base, y
@@ -112,13 +112,11 @@ def kernel_se(x, l=20.0):
 
 def fit_gp(x, y, sigma_n):
     M = kernel_se(x)
-    N = kernel_se(x)
+    M_noise = kernel_se(x)
     for i in xrange(len(x)):
-        M[i, i] += sigma_n * sigma_n
-#    print M
-#    print M.I
-    tmp = np.linalg.solve(M, y)
-    f = N.dot(tmp)
+        M_noise[i, i] += sigma_n * sigma_n
+    tmp = np.linalg.solve(M_noise, y)
+    f = M.dot(tmp)
 
     return f
 
@@ -134,7 +132,7 @@ if __name__ == "__main__":
     plt.plot(x, y_base)
     plt.plot(x, y, '.')
 
-    f = fit_gp(x, y, sigma_n=1.1)
+    f = fit_gp(x, y, sigma_n=2.1)
     plt.subplot(2, 2, 2)
     plt.title('GP Fit')
     plt.plot(x, f)
@@ -142,5 +140,5 @@ if __name__ == "__main__":
 
     plt.show()
 
-#    gpdp = GPDP(x, y)
-#    gpdp.gibbs(50)
+    gpdp = GPDP(x, y)
+    gpdp.gibbs(50)
