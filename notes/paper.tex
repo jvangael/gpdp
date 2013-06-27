@@ -105,49 +105,37 @@ We can perform inference in this model using a collapsed Gibbs sampler. In order
 In algorithm~\ref{alg:cgibbs} we integrate out the Gaussian process $\bm{f}$. In what follows we derive the resampling steps for $z_t$ and $\theta_n$.
 
 \paragraph{Sampling $z_t$} The conditional distribution of $z_t$ can be written as follows
-\begin{eqnarray}
-p(z_t | \bm{K}, \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}) & \propto & \int p(\bm{y} | \bm{f}, \bm{z}_{\lnot t}, z_t, \bm{\theta} ) p(\bm{f} | \bm{K}) d \bm{f}, \\
- & = & \int p(y_t | f_t, \theta_{z_t} ) p(f_t | \bm{y}_{\lnot t}, \bm{z}_{\lnot t}, \bm{\theta}, \bm{K}) df_t.
-\end{eqnarray}
-
-The key bit is that $p(f_t | \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}, \bm{K})$ corresponds to the prediction of a Gaussian process where every datapoint contributes noise that is dependent on the CRP partition it belongs to.
-
 \begin{equation}
-\begin{bmatrix}
-\bm{y} \\ f_t
-\end{bmatrix}
-\sim \mathcal{N}\left(\bm{0},
-\begin{bmatrix}
-\bm{K}(\bm{x}, \bm{x}) + \bm{\Sigma} & \bm{K}(\bm{x},\bm{x_t}) \\
-\bm{K}(\bm{x_t}, \bm{x}) & \bm{K}(\bm{x_t},\bm{x_t})
-\end{bmatrix}
-\right)
+p(z_t | \bm{K}, \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}, \alpha) \propto p(z_t | \bm{z}_{\lnot t}, \alpha) p(\bm{y} | \bm{z}, \bm{K}, \bm{\theta}).
 \end{equation}
 
-Where $\bm{\Sigma}$ is a diagonal matrix with on the diagonal $\bm{\Sigma}_{ii} = \theta_{z_{ii}}$.
+We can compute $p(z_t | \bm{z}_{\lnot t}$ easily using the standard conditional probability for a CRP. Given the noise parameters for every CRP partition are fixed, we can compute the marginal likelihood $p(\bm{y} | \bm{z}, \bm{K}, \bm{\theta})$ analytically. (Equation 2.30 in Carl's book).
 
-We know that \cite{gpml} $p(f_t | \bm{y}, \bm{z}_{\lnot t}, \bm{\theta}, \bm{K})$ can be represented as a Gaussian distribution with mean
+NOTE: we need to say something about sampling a new $z_t$, algorithm 8 from Radford Neal's paper should be able to make this happen.
 
+
+\paragraph{Sampling $\bm{\theta}$}
+The condition distribution of $\bm{\theta}$ can be written as follows
 \begin{equation}
-\bm{K}(\bm{x_t}, \bm{x}) \left[ \bm{K}(\bm{x}, \bm{x}) + \bm{\Sigma} \right]^{-1} \bm{y}_{\lnot t}
+p(\bm{\theta} | \bm{K}, \bm{y}, \bm{z}, H) \propto p(\bm{\theta} | H) p(\bm{y} | \bm{z}, \bm{K}. \bm{\theta})
 \end{equation}
-and variance
+Unfortunately $\bm{\theta}$ influences the marginal likelihood in a complicated way which implies that an analytical expression for the condition distribution on $\bm{\theta}$ is impossible.
+
+\subparagraph{Metropolis-Hastings}
+The simplest and probably least efficient method to sample form the conditional distribution of $\bm{\theta}$ is to use Metropolis-Hastings sampling. We create a proposal distribution around $\bm{\theta}$ and can then evaluate the conditional probability up to a proportionality constant by computing the marginal likelihood of the observations.
+
+\subparagraph{Auxiliary Variable}
+An alternative method to sample from the conditional distribution on $\bm{\theta}$ is to introduce a latent variable $\bm{f}$ for the Gaussian Process. First, we sample
 \begin{equation}
-\bm{K}(\bm{x_t},\bm{x_t}) - \bm{K}(\bm{x_t}, \bm{x})^T \left[ \bm{K}(\bm{x}, \bm{x}) + \bm{\Sigma} \right]^{-1} \bm{K}(\bm{x},\bm{x_t})
+p(\bm{f} | \bm{\theta}, \bm{K}, \bm{y}, \bm{z}, H),
+\end{equation}
+from a multivariate normal distribution.
+
+Given the latent variable $\bm{f}$, each CRP partition becomes independent, and we can sample the $\bm{\theta}$.
+\begin{equation}
+p(\bm{\theta} | \bm{f}, \bm{K}, \bm{y}, \bm{z}, H) \propto \prod_k p(\theta_k) \prod_n p(y_n | f_n, \theta_{z_n}).
 \end{equation}
 
-This means that for each $z_t$ we can analytically compute $p(z_t | \bm{K}, \bm{y}, \bm{z}_{\lnot t}, \bm{\theta})$ as the convolution of two Gaussian distributions. This concludes the resampling of $z_t$ step.
-
-NOTE: we need to say something about Neal Algorithm 8 for sampling from new noise clusters.
-
-
-\paragraph{Sampling $\theta_n$}
-
-\begin{eqnarray}
-p(\bm{\theta} | \bm{K}, \bm{y}, \bm{z}) & \propto & \int p(\bm{y} | \bm{f}, \bm{z}, \bm{\theta}) p(\bm{f} | \bm{K}) d \bm{f}, \\
-& = & \int \left( \prod_t p(y_t | f_t, z_t, \bm{\theta}) \right) p(\bm{f} | \bm{K}) d \bm{f}, \\
-& = & \int \left( \prod_t \mathcal{N}(y_t; f_t + \mu_{z_t}, \sigma^2_{z_t}) \right) p(\bm{f} | \bm{K}) d \bm{f}
-\end{eqnarray}
 NOTE: Can we analytically compute the posterior of $\mu,\sigma$? It's learning a number of Normal-Inverse Gamma distributions where the observations are Gaussians (the GP).
 
 
